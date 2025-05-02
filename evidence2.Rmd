@@ -1,0 +1,33 @@
+---
+title: "evidence2"
+output: html_document
+date: "2025-05-02"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Library Loading
+
+```{r echo=FALSE}
+library(ade4)
+library(ape)
+library(adegenet)
+library(Biostrings)
+library(ggplot2)
+```
+
+Performing sequence loading
+
+SARS COV 2 RHODE ISLAND COMPLETE BY CDC
+
+```{r}
+
+countries <- list(
+  "usa", "china", "india", "france", "germany", "brazil", "south_korea", "japan", "italy", "uk"
+)
+
+sequences <- lapply(countries, function(x) readDNAStringSet(paste("./sequences/", x, ".fasta", sep="")))
+
+```

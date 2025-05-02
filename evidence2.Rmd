@@ -16,18 +16,48 @@ library(ape)
 library(adegenet)
 library(Biostrings)
 library(ggplot2)
+library(dplyr)
+library(ggplot2)
+library(ggthemes)
+library(ggrepel)
+library(stringr)
 ```
 
 Performing sequence loading
 
-SARS COV 2 RHODE ISLAND COMPLETE BY CDC
-
 ```{r}
 
-countries <- list(
-  "usa", "china", "india", "france", "germany", "brazil", "south_korea", "japan", "italy", "uk"
-)
-
+countries <- list("usa", "china", "india", "france", "germany", "brazil", "south_korea", "japan", "italy", "uk")
 sequences <- lapply(countries, function(x) readDNAStringSet(paste("./sequences/", x, ".fasta", sep="")))
+
+print("The sequence lengths for each genome are as follows")
+for (index in 1:length(sequences)) {
+  print(
+    paste(
+      countries[[index]], " = ", width(sequences[[index]]), sep = ""
+    )
+  )
+}
+
+print("The frequencies for each base in each genome are as follows:")
+for (index in 1:length(sequences)) {
+  a_freq <- letterFrequency(sequences[[index]], 'A')
+  c_freq <- letterFrequency(sequences[[index]], 'C')
+  g_freq <- letterFrequency(sequences[[index]], 'G')
+  t_freq <- letterFrequency(sequences[[index]], 'T')
+  
+  print(
+    paste(
+      countries[[index]], ": "
+      , "A = ", a_freq
+      , ", C = ", c_freq
+      , ", G = ", g_freq
+      , ", T = ", t_freq
+      , "Sum = ", a_freq + c_freq, g_freq, t_freq
+      , sep = ""
+    )
+  )
+}
+
 
 ```

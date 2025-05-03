@@ -8,23 +8,10 @@ date: "2025-05-02"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Library Loading
+Load all of the libraries that we'll be using for this project
 
 ```{r echo=FALSE}
-library(ade4)
-library(ape)
-library(adegenet)
-library(Biostrings)
-library(DECIPHER)
-library(ggplot2)
-library(dplyr)
-library(stringr)
-library(tidyr)
-library(phangorn)
-library(ggplot2)
-library(ggthemes)
-library(ggrepel)
-
+# BioCManager library installation
 #if (!requireNamespace("BiocManager", quietly = TRUE)){
 #  install.packages("BiocManager")
 #  BiocManager::install("msa")
@@ -32,21 +19,41 @@ library(ggrepel)
 #  BiocManager::install("phangorn")
 #}
 
+# Library loading
+library(ade4)
+library(ape)
+library(adegenet)
+library(Biostrings)
+library(DECIPHER)
+library(ggplot2)
+library(reshape2)
+library(dplyr)
+library(stringr)
+library(tidyr)
+library(phangorn)
+library(ggplot2)
+library(ggthemes)
+library(ggrepel)
 library(msa)
+
 ```
 
 Performing sequence loading
 
 ```{r}
-# Information
+# List of countries where COVID killed the most people
 countries <- c("usa", "china", "india", "france", "germany", "brazil", "south_korea", "japan", "italy", "uk")
+
+# Map the names to DNA String Sets
 sequences <- sapply(countries, function(x) readDNAStringSet(paste("./sequences/", x, ".fasta", sep="")))
+
+# Convert to DNABin types
 dna_bins <- do.call(c, sapply(sequences, as.DNAbin))
 
 # Labeling and Display
 country_titles <- sapply(countries, function(string) str_to_title(str_replace(string, "_", " ")))
 
-# Sequence Dataframe
+# Create a  Dataframe from the Sequences
 sequence_frame <- data.frame(
   country_key = countries,
   country_title  = country_titles,
@@ -57,19 +64,20 @@ sequence_frame <- data.frame(
   t_frequency = sapply(sequences, function(seq) letterFrequency(seq, 'T'))
 )
 
+# Print Genome Sequence Lengths
 print("The sequence lengths for each genome are as follows")
 sequence_frame[3]
 
-cat("\n")
-
+# Print Genome Sequence Nitrogenous Base Frequencies
 print("The frequencies for each base in each genome are as follows:")
-sequence_frame[c(2, 4, 5, 6, 7)]
+sequence_frame[c(4, 5, 6, 7)]
 
 ```
 
 Convert to data frame and graph
 
 ```{r}
+# Plot Frequencies
 ggplot(
   data = sequence_frame %>% gather(Frequencies, Frequency, -country_title, -country_key, -sequence_length),
   aes(x = country_title, y = Frequency, fill = Frequencies)
@@ -87,8 +95,10 @@ ggplot(
 ```
 
 ```{r}
+# Read FASTAs Again but in a Different Format (idealy, this shouldn't be the case but we couldn't find how to do it)
 countries <- c("usa", "china", "india", "france", "germany", "brazil", "south_korea", "japan", "italy", "uk")
 
+# Place Sequences into a DNAStringSet
 all_sequences <- DNAStringSet()
 for (country in countries) {
   file_path <- paste0("./sequences/", country, ".fasta")
@@ -96,20 +106,29 @@ for (country in countries) {
   all_sequences <- c(all_sequences, seq)
 }
 
+# Align DNA Sequences
 aligned <- AlignSeqs(all_sequences)
 dna <- as.matrix(as.DNAbin(aligned))
 
+# Stop if Our Sequences are not Aligned
 stopifnot(length(unique(ncol(dna))) == 1)
 
-D <- dist.dna(dna, model = "TN93")
-tre <- nj(D)
-plot(tre, cex = 0.6, main = "NJ Tree")
+# DNA Distribution
+dna_distro <- dist.dna(dna, model = "TN93")
 
-myBoots <- boot.phylo(
-  tre, 
-  dna, 
-  function(e) root(nj(dist.dna(e, model = "TN93")), 1),
-  quiet = TRUE
+# Create NJ Tree From DNA Distro
+phylotree <- nj(dna_distro)
+
+# Plot our Phylo Tree
+plot(phylotree, cex = 0.6, main = "NJ Tree")
+
+# Convert our DNA Distribution and Plot it in a Table
+adj_matrix <- as.matrix(dna_distro)
+table.paint(
+  adj_matrix,
+  cleg = 0,
+  clabel.row = 0.25,
+  clabel.col = 0.25
 )
-nodelabels(myBoots, cex = 0.6)
+
 ```

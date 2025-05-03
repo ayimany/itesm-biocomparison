@@ -15,59 +15,101 @@ library(ade4)
 library(ape)
 library(adegenet)
 library(Biostrings)
+library(DECIPHER)
 library(ggplot2)
 library(dplyr)
+library(stringr)
+library(tidyr)
+library(phangorn)
 library(ggplot2)
 library(ggthemes)
 library(ggrepel)
-library(stringr)
+
+#if (!requireNamespace("BiocManager", quietly = TRUE)){
+#  install.packages("BiocManager")
+#  BiocManager::install("msa")
+#  BiocManager::install("DECIPHER")
+#  BiocManager::install("phangorn")
+#}
+
+library(msa)
 ```
 
 Performing sequence loading
 
 ```{r}
+# Information
+countries <- c("usa", "china", "india", "france", "germany", "brazil", "south_korea", "japan", "italy", "uk")
+sequences <- sapply(countries, function(x) readDNAStringSet(paste("./sequences/", x, ".fasta", sep="")))
+dna_bins <- do.call(c, sapply(sequences, as.DNAbin))
 
-countries <- list("usa", "china", "india", "france", "germany", "brazil", "south_korea", "japan", "italy", "uk")
-sequences <- lapply(countries, function(x) readDNAStringSet(paste("./sequences/", x, ".fasta", sep="")))
+# Labeling and Display
+country_titles <- sapply(countries, function(string) str_to_title(str_replace(string, "_", " ")))
+
+# Sequence Dataframe
+sequence_frame <- data.frame(
+  country_key = countries,
+  country_title  = country_titles,
+  sequence_length = sapply(sequences, width),
+  a_frequency = sapply(sequences, function(seq) letterFrequency(seq, 'A')),
+  c_frequency = sapply(sequences, function(seq) letterFrequency(seq, 'C')),
+  g_frequency = sapply(sequences, function(seq) letterFrequency(seq, 'G')),
+  t_frequency = sapply(sequences, function(seq) letterFrequency(seq, 'T'))
+)
 
 print("The sequence lengths for each genome are as follows")
-for (index in 1:length(sequences)) {
-  print(
-    paste(
-      countries[[index]], " = ", width(sequences[[index]]), sep = ""
-    )
-  )
-}
+sequence_frame[3]
+
+cat("\n")
 
 print("The frequencies for each base in each genome are as follows:")
-for (index in 1:length(sequences)) {
-  a_freq <- letterFrequency(sequences[[index]], 'A')
-  c_freq <- letterFrequency(sequences[[index]], 'C')
-  g_freq <- letterFrequency(sequences[[index]], 'G')
-  t_freq <- letterFrequency(sequences[[index]], 'T')
-  
-  print(
-    paste(
-      countries[[index]], ": "
-      , "A = ", a_freq
-      , ", C = ", c_freq
-      , ", G = ", g_freq
-      , ", T = ", t_freq
-      , ", Sum = ", a_freq + c_freq + g_freq + t_freq
-      , sep = ""
-    )
-  )
-}
+sequence_frame[c(2, 4, 5, 6, 7)]
+
 ```
 
 Convert to data frame and graph
 
 ```{r}
-sequence_dataframe <- data.frame(
-  countries = countries,
-  a_freq = lapply(sequences, function(seq) letterFrequency(seq, 'A')),
-  c_freq = lapply(sequences, function(seq) letterFrequency(seq, 'C')),
-  g_freq = lapply(sequences, function(seq) letterFrequency(seq, 'G')),
-  t_freq = lapply(sequences, function(seq) letterFrequency(seq, 'T')),
+ggplot(
+  data = sequence_frame %>% gather(Frequencies, Frequency, -country_title, -country_key, -sequence_length),
+  aes(x = country_title, y = Frequency, fill = Frequencies)
+) +
+  geom_bar(stat = 'identity', position = 'dodge') +
+  xlab("Countries") +
+  scale_fill_discrete(
+    labels = c(
+      "a_frequency" = "Number of A Bases",
+      "c_frequency" = "Number of C Bases",
+      "g_frequency" = "Number of G Bases",
+      "t_frequency" = "Number of T Bases"
+  ))
+
+```
+
+```{r}
+countries <- c("usa", "china", "india", "france", "germany", "brazil", "south_korea", "japan", "italy", "uk")
+
+all_sequences <- DNAStringSet()
+for (country in countries) {
+  file_path <- paste0("./sequences/", country, ".fasta")
+  seq <- readDNAStringSet(file_path)
+  all_sequences <- c(all_sequences, seq)
+}
+
+aligned <- AlignSeqs(all_sequences)
+dna <- as.matrix(as.DNAbin(aligned))
+
+stopifnot(length(unique(ncol(dna))) == 1)
+
+D <- dist.dna(dna, model = "TN93")
+tre <- nj(D)
+plot(tre, cex = 0.6, main = "NJ Tree")
+
+myBoots <- boot.phylo(
+  tre, 
+  dna, 
+  function(e) root(nj(dist.dna(e, model = "TN93")), 1),
+  quiet = TRUE
 )
+nodelabels(myBoots, cex = 0.6)
 ```

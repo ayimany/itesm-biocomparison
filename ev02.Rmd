@@ -28,7 +28,7 @@ Performing sequence loading
 ```{r}
 
 countries <- list("usa", "china", "india", "france", "germany", "brazil", "south_korea", "japan", "italy", "uk")
-sequences <- lapply(countries, function(x) readDNAStringSet(paste("/Users/vale/Downloads/sequences/", x, ".fasta", sep="")))
+sequences <- lapply(countries, function(x) readDNAStringSet(paste("./sequences/", x, ".fasta", sep="")))
 
 print("The sequence lengths for each genome are as follows")
 for (index in 1:length(sequences)) {
@@ -83,7 +83,7 @@ Deaths <- c(1201488, 122358, 533641, 168091, 174979, 702116, 35934, 74694, 19754
 Mortality <- Deaths / Cases * 100
 
 # Leer secuencias
-sequences <- lapply(countries, function(x) readDNAStringSet(paste("/Users/vale/Downloads/sequences/", x, ".fasta", sep="")))
+sequences <- lapply(countries, function(x) readDNAStringSet(paste("./sequences/", x, ".fasta", sep="")))
 
 # Crear dataframe con características
 genome_data <- data.frame(

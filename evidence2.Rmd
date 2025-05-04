@@ -119,8 +119,19 @@ dna_distro <- dist.dna(dna, model = "TN93")
 # Create NJ Tree From DNA Distro
 phylotree <- nj(dna_distro)
 
-# Plot our Phylo Tree
+# Calculate Bootstrapping Values
+boots <- boot.phylo(
+  phylotree, 
+  dna, 
+  function(e) root(nj(dist.dna(e, model = "TN93")), 1),
+  B = 100,
+  quiet = TRUE
+)
+
+# Plot our Phylo Tree with Bootstrap Values
+myPal <- colorRampPalette(c("red","yellow","green","blue"))
 plot(phylotree, cex = 0.6, main = "NJ Tree")
+nodelabels(boots, bg = "white", cex = 0.6, col=transp(num2col(boots, col.pal=myPal),.7))  # Red labels for visibility
 
 # Convert our DNA Distribution and Plot it in a Table
 adj_matrix <- as.matrix(dna_distro)
@@ -130,5 +141,4 @@ table.paint(
   clabel.row = 0.25,
   clabel.col = 0.25
 )
-
 ```

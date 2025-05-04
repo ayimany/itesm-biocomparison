@@ -4,13 +4,15 @@ output: html_document
 date: "2025-05-02"
 ---
 
+
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Load all of the libraries that we'll be using for this project
+First, we must load all of the libraries that we will use for this project. Some of these have to be installed through BioCManager and thus we must include the appropriate installation instructions.
 
-```{r echo=FALSE}
+```{r echo = F, results = 'hide'}
 # BioCManager library installation
 #if (!requireNamespace("BiocManager", quietly = TRUE)){
 #  install.packages("BiocManager")
@@ -38,7 +40,14 @@ library(msa)
 
 ```
 
-Performing sequence loading
+Then, for each of the countries we are loading genomes from, we must read their DNA sequence and store them in a vector for further processing.
+
+This whole block is in charge of the following:
+* Read all genome sequences from the selected countries
+* Convert them to DNA binaries
+* Create a data frame containing the solicited characteristics such as base frequency or genome length
+* The data frame is used to print the characteristics of each present genome such as base frequency and base length
+
 
 ```{r}
 # List of countries where COVID killed the most people
@@ -74,7 +83,7 @@ sequence_frame[c(4, 5, 6, 7)]
 
 ```
 
-Convert to data frame and graph
+Then, the data frame is used to generate a frequency graph for each genome in the sequence vector. There is a set of 4 bars for each present genome.
 
 ```{r}
 # Plot Frequencies
@@ -93,6 +102,19 @@ ggplot(
   ))
 
 ```
+Now, we read the FASTA files again because we didn't find a way to convert them directly to a DNABin formal class. Using this, we generate a phylogenetic tree for each of the genomes:
+
+* Read the FASTA files into a DNAStringSet containing DNA Binaries
+* Load the case and mortality data for each country that we analyzed
+* Determine the mortality rate of each virus inper country
+* Align the genome sequences using AlignSeqs.
+* There are also pre-aligned files in the sequences folder. I aligned these using MAFFT.
+* If we couldn't align them, then we stop the program
+* Then we create a dna distribution using the TN93 model, this means a distribution that allows us to calculate the divergence bewteen DNA sequences. This model is based on the Tamura-Nei 1993 model.
+* Then, we create a phylogenetic tree from the `nj` function. This applies the neighbor-joining algorithm to cluster the most closely related sequences from tge provided distance matrix and makes branch lengths proportional to the evolutionary divergence calculated via TN93.
+* We plot the tree, along with bootstrap values which indicate how confident we are in wether or not these two branches are related. The more closely related, the more green the value shows up, else we side towards red.
+* Finally, we generate an adjacency matrix from our calculated DNA distribution, which allows us to see, graphically, how closely related two sequences are.
+* As an extra, we have added a dot at each tip to indicate the mortality rate of the given virus. This allows us to see how deadly viruses become as they evolve.
 
 ```{r}
 # Read FASTAs Again but in a Different Format (idealy, this shouldn't be the case but we couldn't find how to do it)
@@ -115,11 +137,7 @@ mortality_data <- data.frame(
   Deaths = c(1201488, 122358, 533641, 168091, 174979, 702116, 
              35934, 74694, 197542, 232112)
   
-) %>% 
-  mutate(
-    Mortality = round(Deaths/Cases * 100, 2),
-    Country = stringr::str_to_title(gsub("_", " ", label))
-  )
+)
 
 mortality_data$Rates = mortality_data$Deaths / mortality_data$Cases
 
@@ -136,8 +154,6 @@ dna_distro <- dist.dna(dna, model = "TN93")
 # Create NJ Tree From DNA Distro
 phylotree <- nj(dna_distro)
 
-
-
 # Calculate Bootstrapping Values
 boots <- boot.phylo(
   phylotree, 
@@ -148,10 +164,10 @@ boots <- boot.phylo(
 )
 
 # Plot our Phylo Tree with Bootstrap Values
-myPal <- colorRampPalette(c("red","yellow","green","blue"))
+cpalette <- colorRampPalette(c("red","yellow","green","blue"))
 mortalityPalette <- colorRampPalette(c("red", "blue"))
 plot(phylotree, cex = 0.6, main = "NJ Tree")
-nodelabels(boots, bg = "white", cex = 0.6, col=transp(num2col(boots, col.pal=myPal),.7))  # Red labels for visibility
+nodelabels(boots, bg = "white", cex = 0.6, col=transp(num2col(boots, col.pal=cpalette),.7))
 tiplabels(frame = "none", pch = 20, col = transp(num2col(mortality_data$Rates, col.pal=mortalityPalette)))
 
 # Convert our DNA Distribution and Plot it in a Table
@@ -163,3 +179,12 @@ table.paint(
   clabel.col = 0.25
 )
 ```
+
+
+*CONCLUSIONS*
+
+As we can see from the gathered data, we can conclude that some of the viruses we have explored don't necessarily relate to each other, however, many of them have a high similarity score. We can see that the viruses from India and China are estimated to have, quite literally, an estimate of 100% similarity as well as the intersection between these two and the French virus. India and China are very close regions, which would make sense. France being so similar, however, can leave us somewhat baffled as to what this implies.
+
+Furthermore, we can see high similarity scores bewteen the United Kingdom and the intersection with Italy, Germany and South Korea. This, coupled with the previous statements, suggests that there was a lot of immigration from the east to the west or vice-versa during the times in which these viruses were active.
+
+Finally, comparing the mortality rates, we can see that the most violent virus strands were located in asiatic countries, that is, South Korea, China, India and Japan. There were some very violent viruses in Europe, too, but their density is not as high as in Asia. America, the continent, seems to have had relatively mild mortality rates, although of course they were still high.

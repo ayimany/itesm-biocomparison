@@ -106,6 +106,23 @@ for (country in countries) {
   all_sequences <- c(all_sequences, seq)
 }
 
+# Load Mortality Rates
+# 3. Prepare mortality data with EXACT MATCH to tip labels
+mortality_data <- data.frame(
+  label = countries,  # Must match tree$tip.label
+  Cases = c(103436829, 99380363, 45043415, 39016278, 38437756, 37511921, 
+            34571873, 33803572, 26826486, 24992089),
+  Deaths = c(1201488, 122358, 533641, 168091, 174979, 702116, 
+             35934, 74694, 197542, 232112)
+  
+) %>% 
+  mutate(
+    Mortality = round(Deaths/Cases * 100, 2),
+    Country = stringr::str_to_title(gsub("_", " ", label))
+  )
+
+mortality_data$Rates = mortality_data$Deaths / mortality_data$Cases
+
 # Align DNA Sequences
 aligned <- AlignSeqs(all_sequences)
 dna <- as.matrix(as.DNAbin(aligned))
@@ -119,6 +136,8 @@ dna_distro <- dist.dna(dna, model = "TN93")
 # Create NJ Tree From DNA Distro
 phylotree <- nj(dna_distro)
 
+
+
 # Calculate Bootstrapping Values
 boots <- boot.phylo(
   phylotree, 
@@ -130,8 +149,10 @@ boots <- boot.phylo(
 
 # Plot our Phylo Tree with Bootstrap Values
 myPal <- colorRampPalette(c("red","yellow","green","blue"))
+mortalityPalette <- colorRampPalette(c("red", "blue"))
 plot(phylotree, cex = 0.6, main = "NJ Tree")
 nodelabels(boots, bg = "white", cex = 0.6, col=transp(num2col(boots, col.pal=myPal),.7))  # Red labels for visibility
+tiplabels(frame = "none", pch = 20, col = transp(num2col(mortality_data$Rates, col.pal=mortalityPalette)))
 
 # Convert our DNA Distribution and Plot it in a Table
 adj_matrix <- as.matrix(dna_distro)
